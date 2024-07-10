@@ -91,6 +91,7 @@ const main = async () => {
   );
 
   fs.writeFileSync(fileName, patch);
+  console.log(`Diff written to ${fileName}`);
 };
 
 main();
