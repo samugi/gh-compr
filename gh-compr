@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -e
+
+# Extracts owner, repo, and pull number from PR URL
+extract_info() {
+  # remove scheme if present
+  local prUrl=${1#*//}
+
+  local urlParts=(${prUrl//\// })
+  local owner=${urlParts[1]}
+  local repo=${urlParts[2]}
+  local pull_number=${urlParts[4]}
+
+  echo "$owner $repo $pull_number"
+}
+
+# Tags diffs' heaeders with PR number
+tag_diff() {
+  local diff=$1
+  local prNumber=$2
+
+  local taggedDiff=$(echo -e "$diff" | sed -E "/^(\+\+\+|\-\-\-)/ s|$|    # [PR: ${prNumber}]|")
+
+  echo "$taggedDiff"
+}
+
+# Check if the PRs urls were passed as arguments
+# If not, prompt the user to enter them
+if [ $# -eq 2 ]; then
+  prUrl1=$1
+  prUrl2=$2
+else
+  read -p "Enter the first PR URL: " prUrl1
+  read -p "Enter the second PR URL: " prUrl2
+fi
+
+read -r owner1 repo1 pr1Number <<< $(extract_info $prUrl1)
+read -r owner2 repo2 pr2Number <<< $(extract_info $prUrl2)
+
+# Fetch PR diffs using gh CLI
+pr1Diff=$(gh pr diff $pr1Number -R $owner1/$repo1)
+pr2Diff=$(gh pr diff $pr2Number -R $owner2/$repo2)
+
+# Remove context lines from the diffs
+# it would be nice if https://cli.github.com/manual/gh_pr_diff
+# had an option to set the number of context lines so this step
+# wouldn't be necessary
+pr1NoCtxDiff=$(echo "$pr1Diff" | grep -v '^[^+-]')
+pr2NoCtxDiff=$(echo "$pr2Diff" | grep -v '^[^+-]')
+
+# Tag headers to make sure filenames always exist in the final diff
+pr1TaggedDiff=$(tag_diff "$pr1NoCtxDiff" "$pr1Number")
+pr2TaggedDiff=$(tag_diff "$pr2NoCtxDiff" "$pr2Number")
+
+# Save diffs to temporary files
+pr1DiffFile=$(mktemp)
+pr2DiffFile=$(mktemp)
+echo "$pr1TaggedDiff" > $pr1DiffFile
+echo "$pr2TaggedDiff" > $pr2DiffFile
+
+# Generate diff and save to file
+patchFile="${pr1Number}-${pr2Number}.diff"
+diff -u0 $pr1DiffFile $pr2DiffFile > $patchFile || true
+echo "Diff saved to $patchFile"
+
+# Clean up temporary files
+rm $pr1DiffFile $pr2DiffFile
