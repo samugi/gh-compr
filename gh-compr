@@ -31,8 +31,8 @@ if [ $# -eq 2 ]; then
   prUrl1=$1
   prUrl2=$2
 else
-  read -pr "Enter the first PR URL: " prUrl1
-  read -pr "Enter the second PR URL: " prUrl2
+  read -rp "Enter the first PR URL: " prUrl1
+  read -rp "Enter the second PR URL: " prUrl2
 fi
 
 read -r owner1 repo1 pr1Number <<< "$(extract_info "$prUrl1")"
@@ -53,16 +53,7 @@ pr2NoCtxDiff=$(echo "$pr2Diff" | grep -v '^[^+-]')
 pr1TaggedDiff=$(tag_diff "$pr1NoCtxDiff" "$pr1Number")
 pr2TaggedDiff=$(tag_diff "$pr2NoCtxDiff" "$pr2Number")
 
-# Save diffs to temporary files
-pr1DiffFile=$(mktemp)
-pr2DiffFile=$(mktemp)
-echo "$pr1TaggedDiff" > "$pr1DiffFile"
-echo "$pr2TaggedDiff" > "$pr2DiffFile"
-
 # Generate diff and save to file
 patchFile="${pr1Number}-${pr2Number}.diff"
-diff -u0 "$pr1DiffFile" "$pr2DiffFile" > "$patchFile" || true
+diff -u0 <(echo "$pr1TaggedDiff") <(echo "$pr2TaggedDiff") > "$patchFile" || true
 echo "Diff saved to $patchFile"
-
-# Clean up temporary files
-rm "$pr1DiffFile" "$pr2DiffFile"
