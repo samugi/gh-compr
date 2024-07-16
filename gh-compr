@@ -25,6 +25,21 @@ tag_diff() {
   echo "$taggedDiff"
 }
 
+output=""
+usage() { echo "Usage: gh compr <PR_1_URL> <PR_2_URL> [-o <output.diff>]" 1>&2; exit 1; }
+# Parse options
+while getopts "o:" opt; do
+  case ${opt} in
+    o)
+      output=$OPTARG
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+shift "$((OPTIND -1))"
+
 # Check if the PRs urls were passed as arguments
 # If not, prompt the user to enter them
 if [ $# -eq 2 ]; then
@@ -54,6 +69,10 @@ pr1TaggedDiff=$(tag_diff "$pr1NoCtxDiff" "$pr1Number")
 pr2TaggedDiff=$(tag_diff "$pr2NoCtxDiff" "$pr2Number")
 
 # Generate diff and save to file
-patchFile="${pr1Number}-${pr2Number}.diff"
-diff -u0 <(echo "$pr1TaggedDiff") <(echo "$pr2TaggedDiff") > "$patchFile" || true
-echo "Diff saved to $patchFile"
+diff_output=$(diff -u0 <(echo "$pr1TaggedDiff") <(echo "$pr2TaggedDiff") || true)
+if [ -n "$output" ]; then
+  echo "$diff_output" > "$output"
+  echo "Diff saved to $output"
+else
+  echo "$diff_output"
+fi
