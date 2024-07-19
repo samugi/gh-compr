@@ -13,6 +13,6 @@ gh extension install https://github.com/samugi/gh-compr
 ## Usage
 
 ```bash
-gh compr <PR_1_URL> <PR_2_URL>
-Diff saved to <PR_1_ID>-<PR_2_ID>.diff
+gh compr <PR_1_URL> <PR_2_URL> [-o output.diff]
+Diff saved to output.diff
 ```
