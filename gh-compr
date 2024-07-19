@@ -55,13 +55,13 @@ fi
 output1=$(validate_url_extract_info "$prUrl1")
 status=$?
 if [ $status -ne 0 ]; then
-  echo $output1
+  echo "$output1"
   exit 1
 fi
 output2=$(validate_url_extract_info "$prUrl2")
 status=$?
 if [ $status -ne 0 ]; then
-  echo $output2
+  echo "$output2"
   exit 1
 fi
 
