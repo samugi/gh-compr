@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-set -e
 
-# Extracts owner, repo, and pull number from PR URL
-extract_info() {
-  # remove scheme if present
-  local prUrl=${1#*//}
+# Validates github PR URL and extracts owner, repo and PR number
+validate_url_extract_info() {
+  local url=$1
+  local regex="^https://github\.com/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/pull/([0-9]+)$"
+  if [[ ! $url =~ $regex ]]; then
+    echo "PR URL '$url' does not match the expected format: 'https://github.com/<owner>/<repo>/pull/<number>'"
+    return 1
+  fi
 
-  IFS='/' read -r -a urlParts <<< "$prUrl"
-  local owner=${urlParts[1]}
-  local repo=${urlParts[2]}
-  local pull_number=${urlParts[4]}
+  local owner=${BASH_REMATCH[1]}
+  local repo=${BASH_REMATCH[2]}
+  local pull_number=${BASH_REMATCH[3]}
 
   echo "$owner $repo $pull_number"
 }
@@ -50,8 +52,21 @@ else
   read -rp "Enter the second PR URL: " prUrl2
 fi
 
-read -r owner1 repo1 pr1Number <<< "$(extract_info "$prUrl1")"
-read -r owner2 repo2 pr2Number <<< "$(extract_info "$prUrl2")"
+output1=$(validate_url_extract_info "$prUrl1")
+status=$?
+if [ $status -ne 0 ]; then
+  echo $output1
+  exit 1
+fi
+output2=$(validate_url_extract_info "$prUrl2")
+status=$?
+if [ $status -ne 0 ]; then
+  echo $output2
+  exit 1
+fi
+
+read -r owner1 repo1 pr1Number <<< "$output1"
+read -r owner2 repo2 pr2Number <<< "$output2"
 
 # Fetch PR diffs using gh CLI
 pr1Diff=$(gh pr diff "$pr1Number" -R "$owner1/$repo1")
